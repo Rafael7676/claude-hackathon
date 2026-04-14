@@ -1,10 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
-import type { Session } from '@supabase/supabase-js'
-import { MapContainer, TileLayer, Marker, Popup, Circle, useMapEvents } from 'react-leaflet'
+import { MapContainer, TileLayer, Marker, Popup, Circle } from 'react-leaflet'
 import L from 'leaflet'
 import { supabase } from '../lib/supabase'
 
-// Fix leaflet default marker icons
 import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png'
 import markerIcon from 'leaflet/dist/images/marker-icon.png'
 import markerShadow from 'leaflet/dist/images/marker-shadow.png'
@@ -26,40 +24,47 @@ interface SquadMember {
 
 const PING_RADIUS_M = 300
 
-function PingRadiusDisplay({ center }: { center: [number, number] }) {
-  return (
-    <Circle
-      center={center}
-      radius={PING_RADIUS_M}
-      pathOptions={{ color: '#7c3aed', fillColor: '#7c3aed', fillOpacity: 0.08, weight: 1.5, dashArray: '6' }}
-    />
-  )
+// Persist a guest ID across page reloads
+function getGuestId(): string {
+  const key = 'squad_guest_id'
+  let id = localStorage.getItem(key)
+  if (!id) {
+    id = crypto.randomUUID()
+    localStorage.setItem(key, id)
+  }
+  return id
 }
 
-function LocationTracker({ onLocation }: { onLocation: (lat: number, lng: number) => void }) {
-  useMapEvents({
-    locationfound(e) {
-      onLocation(e.latlng.lat, e.latlng.lng)
-    },
-  })
-  return null
+function getGuestName(): string {
+  const key = 'squad_guest_name'
+  let name = localStorage.getItem(key)
+  if (!name) {
+    const adjectives = ['Swift', 'Bold', 'Chill', 'Rad', 'Cozy', 'Epic', 'Cool', 'Loud']
+    const nouns = ['Badger', 'Hawk', 'Fox', 'Bear', 'Wolf', 'Owl', 'Lynx', 'Deer']
+    name = adjectives[Math.floor(Math.random() * adjectives.length)] +
+           nouns[Math.floor(Math.random() * nouns.length)]
+    localStorage.setItem(key, name)
+  }
+  return name
 }
 
-interface Props {
-  session: Session
-}
-
-export default function MapPage({ session }: Props) {
+export default function MapPage() {
   const [myLocation, setMyLocation] = useState<[number, number] | null>(null)
   const [nearbyUsers, setNearbyUsers] = useState<SquadMember[]>([])
   const [pinging, setPinging] = useState(false)
   const [pinged, setPinged] = useState(false)
   const mapRef = useRef<L.Map | null>(null)
 
-  // Get current location on mount
+  const guestId = getGuestId()
+  const guestName = getGuestName()
+
   useEffect(() => {
     navigator.geolocation.getCurrentPosition(
-      pos => setMyLocation([pos.coords.latitude, pos.coords.longitude]),
+      pos => {
+        const loc: [number, number] = [pos.coords.latitude, pos.coords.longitude]
+        setMyLocation(loc)
+        mapRef.current?.setView(loc, 16)
+      },
       () => {
         // Fallback: UW-Madison Memorial Union
         setMyLocation([43.0766, -89.4125])
@@ -67,7 +72,6 @@ export default function MapPage({ session }: Props) {
     )
   }, [])
 
-  // Subscribe to real-time presence updates
   useEffect(() => {
     const channel = supabase
       .channel('squad-presence')
@@ -93,11 +97,9 @@ export default function MapPage({ session }: Props) {
     if (!myLocation) return
     setPinging(true)
 
-    const username = session.user.email?.split('@')[0] ?? 'anon'
-
     await supabase.from('squad_members').upsert({
-      id: session.user.id,
-      username,
+      id: guestId,
+      username: guestName,
       lat: myLocation[0],
       lng: myLocation[1],
       squad_id: null,
@@ -108,11 +110,7 @@ export default function MapPage({ session }: Props) {
     setPinged(true)
   }
 
-  async function handleSignOut() {
-    await supabase.auth.signOut()
-  }
-
-  const defaultCenter: [number, number] = myLocation ?? [43.0766, -89.4125]
+  const defaultCenter: [number, number] = [43.0766, -89.4125]
 
   return (
     <div className="relative w-full h-screen bg-slate-900 flex flex-col">
@@ -122,15 +120,7 @@ export default function MapPage({ session }: Props) {
           <span className="text-xl">📡</span>
           <span className="text-white font-bold text-lg">Squad Up</span>
         </div>
-        <div className="flex items-center gap-3">
-          <span className="text-slate-400 text-sm">{session.user.email?.split('@')[0]}</span>
-          <button
-            onClick={handleSignOut}
-            className="text-slate-400 hover:text-white text-sm transition-colors"
-          >
-            Sign out
-          </button>
-        </div>
+        <span className="text-slate-400 text-sm">{guestName}</span>
       </div>
 
       {/* Map */}
@@ -138,40 +128,35 @@ export default function MapPage({ session }: Props) {
         <MapContainer
           center={defaultCenter}
           zoom={16}
-          className="w-full h-full"
+          style={{ height: '100%', width: '100%' }}
           ref={mapRef}
           zoomControl={false}
         >
           <TileLayer
-            url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
-            attribution='&copy; <a href="https://carto.com/">CARTO</a>'
+            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
           />
-          <LocationTracker onLocation={(lat, lng) => setMyLocation([lat, lng])} />
 
-          {/* My location */}
           {myLocation && (
             <>
-              <PingRadiusDisplay center={myLocation} />
+              <Circle
+                center={myLocation}
+                radius={PING_RADIUS_M}
+                pathOptions={{ color: '#7c3aed', fillColor: '#7c3aed', fillOpacity: 0.08, weight: 1.5, dashArray: '6' }}
+              />
               <Marker position={myLocation}>
-                <Popup>You are here</Popup>
+                <Popup>You ({guestName})</Popup>
               </Marker>
             </>
           )}
 
-          {/* Nearby users */}
           {nearbyUsers
-            .filter(u => u.id !== session.user.id)
+            .filter(u => u.id !== guestId)
             .map(user => (
               <Marker key={user.id} position={[user.lat, user.lng]}>
                 <Popup>
                   <div className="text-center">
                     <p className="font-semibold">{user.username}</p>
-                    <button
-                      className="mt-2 text-xs bg-violet-600 text-white px-3 py-1 rounded-full"
-                      onClick={() => {/* TODO: send squad invite */}}
-                    >
-                      Invite to squad
-                    </button>
                   </div>
                 </Popup>
               </Marker>
@@ -184,13 +169,11 @@ export default function MapPage({ session }: Props) {
         <div className="flex items-center justify-between mb-3">
           <p className="text-slate-400 text-sm">
             {pinged
-              ? `${nearbyUsers.filter(u => u.id !== session.user.id).length} people nearby`
-              : 'Drop a ping to see who\'s around'}
+              ? `${nearbyUsers.filter(u => u.id !== guestId).length} people nearby`
+              : "Drop a ping to see who's around"}
           </p>
-          {pinged && nearbyUsers.filter(u => u.id !== session.user.id).length > 0 && (
-            <span className="text-xs bg-violet-700 text-white px-2 py-0.5 rounded-full">
-              Live
-            </span>
+          {pinged && nearbyUsers.filter(u => u.id !== guestId).length > 0 && (
+            <span className="text-xs bg-violet-700 text-white px-2 py-0.5 rounded-full">Live</span>
           )}
         </div>
         <button
