@@ -1,0 +1,520 @@
+
+<h2 class="sr-only">Interactive prototype of the CONNECT campus social app, showing five screens: home feed, AI matching, nearby invitations, coffee chat setup, and profile onboarding.</h2>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,400;0,500;1,400&family=Fraunces:opsz,wght@9..144,400;9..144,500&display=swap');
+:root {
+  --app-bg: #FAFAF7;
+  --card-bg: #FFFFFF;
+  --accent: #1D9E75;
+  --accent-light: #E1F5EE;
+  --accent-dark: #0F6E56;
+  --warm: #D85A30;
+  --warm-light: #FAECE7;
+  --purple: #7F77DD;
+  --purple-light: #EEEDFE;
+  --pink: #D4537E;
+  --pink-light: #FBEAF0;
+  --text-primary: #2C2C2A;
+  --text-secondary: #888780;
+  --text-hint: #B4B2A9;
+  --border: rgba(0,0,0,0.08);
+  --nav-height: 56px;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: 'DM Sans', sans-serif; color: var(--text-primary); }
+
+.phone-frame {
+  width: 375px;
+  max-width: 100%;
+  margin: 0 auto;
+  background: var(--app-bg);
+  border-radius: 32px;
+  border: 0.5px solid var(--border);
+  overflow: hidden;
+  position: relative;
+  height: 720px;
+}
+.screen { display: none; height: calc(100% - var(--nav-height)); overflow-y: auto; padding-bottom: 16px; }
+.screen.active { display: block; }
+
+.status-bar {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 12px 24px 4px; font-size: 12px; font-weight: 500;
+  color: var(--text-secondary);
+}
+
+.screen-header {
+  padding: 8px 24px 16px;
+}
+.screen-header h1 {
+  font-family: 'Fraunces', serif; font-size: 26px; font-weight: 500;
+  color: var(--text-primary); line-height: 1.2;
+}
+.screen-header p {
+  font-size: 13px; color: var(--text-secondary); margin-top: 4px; line-height: 1.5;
+}
+
+.card {
+  background: var(--card-bg); border-radius: 16px; margin: 0 16px 12px;
+  padding: 16px; border: 0.5px solid var(--border);
+}
+
+.pill-row { display: flex; gap: 8px; padding: 0 16px; margin-bottom: 16px; flex-wrap: wrap; }
+.pill {
+  padding: 6px 14px; border-radius: 20px; font-size: 12px; font-weight: 500;
+  border: 0.5px solid var(--border); background: var(--card-bg); color: var(--text-secondary);
+  cursor: pointer; transition: all 0.2s;
+}
+.pill.active { background: var(--accent-light); color: var(--accent-dark); border-color: var(--accent); }
+
+.avatar {
+  width: 40px; height: 40px; border-radius: 50%; display: flex;
+  align-items: center; justify-content: center; font-weight: 500;
+  font-size: 14px; flex-shrink: 0;
+}
+
+.tag {
+  display: inline-block; padding: 3px 10px; border-radius: 12px;
+  font-size: 11px; font-weight: 500; margin: 2px 4px 2px 0;
+}
+
+.bottom-nav {
+  position: absolute; bottom: 0; left: 0; right: 0; height: var(--nav-height);
+  background: var(--card-bg); border-top: 0.5px solid var(--border);
+  display: flex; justify-content: space-around; align-items: center; padding: 0 8px;
+}
+.nav-item {
+  display: flex; flex-direction: column; align-items: center; gap: 2px;
+  font-size: 10px; color: var(--text-hint); cursor: pointer; padding: 8px 12px;
+  transition: color 0.2s; border: none; background: none;
+}
+.nav-item.active { color: var(--accent); }
+.nav-item svg { width: 22px; height: 22px; }
+
+.match-score {
+  display: inline-flex; align-items: center; gap: 4px;
+  font-size: 12px; font-weight: 500; color: var(--accent-dark);
+  background: var(--accent-light); padding: 3px 10px; border-radius: 12px;
+}
+
+.invite-card {
+  background: var(--card-bg); border-radius: 16px; margin: 0 16px 12px;
+  border: 0.5px solid var(--border); overflow: hidden;
+}
+.invite-img {
+  height: 120px; display: flex; align-items: flex-end; padding: 12px;
+  font-size: 11px; color: white; font-weight: 500;
+}
+.invite-body { padding: 14px 16px; }
+
+.btn-primary {
+  background: var(--accent); color: white; border: none; border-radius: 12px;
+  padding: 10px 20px; font-size: 13px; font-weight: 500; cursor: pointer;
+  font-family: inherit; transition: transform 0.15s;
+}
+.btn-primary:active { transform: scale(0.97); }
+.btn-outline {
+  background: none; color: var(--accent-dark); border: 1px solid var(--accent);
+  border-radius: 12px; padding: 10px 20px; font-size: 13px; font-weight: 500;
+  cursor: pointer; font-family: inherit;
+}
+
+.chat-bubble {
+  padding: 12px 16px; border-radius: 16px; font-size: 13px; line-height: 1.5;
+  max-width: 85%; margin-bottom: 8px;
+}
+.chat-ai {
+  background: var(--accent-light); color: var(--accent-dark);
+  border-bottom-left-radius: 4px; margin-right: auto;
+}
+.chat-user {
+  background: var(--purple-light); color: #3C3489;
+  border-bottom-right-radius: 4px; margin-left: auto;
+}
+
+.interest-grid {
+  display: flex; flex-wrap: wrap; gap: 8px; padding: 0 16px; margin-bottom: 16px;
+}
+.interest-chip {
+  padding: 8px 16px; border-radius: 20px; font-size: 12px;
+  border: 0.5px solid var(--border); background: var(--card-bg);
+  cursor: pointer; transition: all 0.2s; color: var(--text-secondary);
+}
+.interest-chip.selected { background: var(--purple-light); color: #3C3489; border-color: var(--purple); }
+
+.distance-badge {
+  font-size: 11px; color: var(--warm); background: var(--warm-light);
+  padding: 3px 8px; border-radius: 8px; font-weight: 500;
+}
+
+.pulse { animation: pulse 2s infinite; }
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+.fade-in { animation: fadeIn 0.3s ease; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+</style>
+
+<div class="phone-frame">
+  <!-- Screen 1: Home Feed -->
+  <div class="screen active" id="screen-home">
+    <div class="status-bar"><span>9:41</span><span style="display:flex;gap:4px;align-items:center;">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 1l22 22M16.72 11.06A10.94 10.94 0 0119 12.55M5 12.55a10.94 10.94 0 015.17-2.94M10.71 5.05A16 16 0 0122.56 9M1.42 9a15.91 15.91 0 014.7-2.88M8.53 16.11a6 6 0 016.95 0M12 20h.01"/></svg>
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="6" width="18" height="12" rx="2"/><line x1="23" y1="13" x2="23" y2="11"/></svg>
+    </span></div>
+    <div class="screen-header">
+      <h1>Good morning, Alex</h1>
+      <p>3 people nearby are open to connect</p>
+    </div>
+    <div class="pill-row">
+      <span class="pill active">All</span>
+      <span class="pill">Coffee</span>
+      <span class="pill">Meals</span>
+      <span class="pill">Study</span>
+      <span class="pill">Activity</span>
+    </div>
+
+    <div class="card fade-in" style="display:flex;gap:14px;align-items:flex-start;">
+      <div class="avatar" style="background:var(--purple-light);color:#3C3489;">JM</div>
+      <div style="flex:1;">
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <span style="font-weight:500;font-size:14px;">Jordan M.</span>
+          <span class="distance-badge">2 min walk</span>
+        </div>
+        <p style="font-size:12px;color:var(--text-secondary);margin:4px 0 8px;">Grabbing coffee at Starbucks Memorial Union — want company!</p>
+        <div>
+          <span class="tag" style="background:var(--accent-light);color:var(--accent-dark);">Philosophy</span>
+          <span class="tag" style="background:var(--warm-light);color:#993C1D;">Film</span>
+        </div>
+        <div style="display:flex;gap:8px;margin-top:10px;">
+          <button class="btn-primary" style="padding:7px 16px;font-size:12px;" onclick="showScreen('screen-chat')">Join</button>
+          <button class="btn-outline" style="padding:7px 16px;font-size:12px;">Wave</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="card fade-in" style="animation-delay:0.1s;display:flex;gap:14px;align-items:flex-start;">
+      <div class="avatar" style="background:var(--pink-light);color:#72243E;">SP</div>
+      <div style="flex:1;">
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <span style="font-weight:500;font-size:14px;">Sarah P.</span>
+          <span class="distance-badge">5 min walk</span>
+        </div>
+        <p style="font-size:12px;color:var(--text-secondary);margin:4px 0 8px;">Open seat at Gordon's for lunch — studying for midterms but happy to chat</p>
+        <div>
+          <span class="tag" style="background:var(--purple-light);color:#3C3489;">CS major</span>
+          <span class="tag" style="background:var(--accent-light);color:var(--accent-dark);">Hiking</span>
+        </div>
+        <div style="display:flex;gap:8px;margin-top:10px;">
+          <button class="btn-primary" style="padding:7px 16px;font-size:12px;">Join</button>
+          <button class="btn-outline" style="padding:7px 16px;font-size:12px;">Wave</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="invite-card fade-in" style="animation-delay:0.2s;">
+      <div class="invite-img" style="background:linear-gradient(135deg, #1D9E75 0%, #085041 100%);">
+        <span style="background:rgba(0,0,0,0.3);padding:4px 10px;border-radius:8px;">5 spots left</span>
+      </div>
+      <div class="invite-body">
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <span style="font-weight:500;font-size:14px;">Pickup basketball @ Nick</span>
+          <span style="font-size:11px;color:var(--text-secondary);">4:30 PM</span>
+        </div>
+        <p style="font-size:12px;color:var(--text-secondary);margin:6px 0;">Posted by Marcus T. — need 5 more for full court</p>
+        <button class="btn-primary" style="width:100%;margin-top:8px;">I'm in</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Screen 2: AI Match -->
+  <div class="screen" id="screen-match">
+    <div class="status-bar"><span>9:41</span><span></span></div>
+    <div class="screen-header">
+      <h1>AI matching</h1>
+      <p>Claude finds complementary connections based on your curiosity, not just your major</p>
+    </div>
+
+    <div class="card" style="background:var(--accent-light);border-color:var(--accent);">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent-dark)" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+        <span style="font-size:13px;font-weight:500;color:var(--accent-dark);">How it works</span>
+      </div>
+      <p style="font-size:12px;color:var(--accent-dark);line-height:1.6;">Tell us what you're curious about in your own words. Our AI finds people whose interests complement — not just match — yours. An econ student curious about art meets an art student curious about data.</p>
+    </div>
+
+    <div style="padding:0 16px;margin-bottom:12px;">
+      <div style="display:flex;gap:8px;flex-direction:column;">
+        <div class="chat-ai">Hey Alex! Tell me what you're curious about lately — doesn't have to be school stuff.</div>
+        <div class="chat-user">I'm a CS major but honestly I've been really into urban planning and how cities are designed. Also trying to get better at cooking.</div>
+        <div class="chat-ai">Love that combo! I found 3 people you should meet this week. Here's why each one is interesting for you:</div>
+      </div>
+    </div>
+
+    <div class="card fade-in">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+        <div style="display:flex;align-items:center;gap:10px;">
+          <div class="avatar" style="background:#E6F1FB;color:#0C447C;">RL</div>
+          <div>
+            <span style="font-weight:500;font-size:14px;">Rosa L.</span>
+            <p style="font-size:11px;color:var(--text-secondary);">Urban Planning + Geography</p>
+          </div>
+        </div>
+        <span class="match-score">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="var(--accent)" stroke="none"><path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z"/></svg>
+          94%
+        </span>
+      </div>
+      <p style="font-size:12px;color:var(--text-secondary);line-height:1.5;margin-bottom:10px;">Rosa studies how cities shape communities — she'd love your tech perspective on smart city data. She also runs a cooking club on campus.</p>
+      <div>
+        <span class="tag" style="background:var(--accent-light);color:var(--accent-dark);">Urban design</span>
+        <span class="tag" style="background:var(--warm-light);color:#993C1D;">Cooking club</span>
+        <span class="tag" style="background:var(--purple-light);color:#3C3489;">GIS + data</span>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:12px;">
+        <button class="btn-primary" style="flex:1;font-size:12px;" onclick="showScreen('screen-chat')">Set up coffee chat</button>
+        <button class="btn-outline" style="font-size:12px;padding:8px 12px;">Skip</button>
+      </div>
+    </div>
+
+    <div class="card fade-in" style="animation-delay:0.1s;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+        <div style="display:flex;align-items:center;gap:10px;">
+          <div class="avatar" style="background:var(--warm-light);color:#993C1D;">TK</div>
+          <div>
+            <span style="font-weight:500;font-size:14px;">Tyler K.</span>
+            <p style="font-size:11px;color:var(--text-secondary);">Architecture + Art history</p>
+          </div>
+        </div>
+        <span class="match-score">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="var(--accent)" stroke="none"><path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z"/></svg>
+          87%
+        </span>
+      </div>
+      <p style="font-size:12px;color:var(--text-secondary);line-height:1.5;margin-bottom:10px;">Tyler's thesis is on walkable cities — overlaps perfectly with your urban planning interest. He's also into 3D modeling which connects to your CS background.</p>
+      <div>
+        <span class="tag" style="background:var(--purple-light);color:#3C3489;">Walkable cities</span>
+        <span class="tag" style="background:#E6F1FB;color:#0C447C;">3D modeling</span>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:12px;">
+        <button class="btn-primary" style="flex:1;font-size:12px;">Set up coffee chat</button>
+        <button class="btn-outline" style="font-size:12px;padding:8px 12px;">Skip</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Screen 3: Nearby / Broadcast -->
+  <div class="screen" id="screen-nearby">
+    <div class="status-bar"><span>9:41</span><span></span></div>
+    <div class="screen-header">
+      <h1>Broadcast</h1>
+      <p>Share an open invitation with people nearby</p>
+    </div>
+
+    <div class="card" style="border:1.5px dashed var(--accent);background:var(--accent-light);">
+      <div style="text-align:center;padding:16px 0;">
+        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--accent-dark)" stroke-width="1.5" style="margin-bottom:8px;"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+        <p style="font-size:14px;font-weight:500;color:var(--accent-dark);">Create a broadcast</p>
+        <p style="font-size:12px;color:var(--accent-dark);opacity:0.7;margin-top:4px;">Invite people within walking distance to join you</p>
+      </div>
+    </div>
+
+    <div style="padding:0 16px 8px;"><span style="font-size:12px;font-weight:500;color:var(--text-secondary);letter-spacing:0.5px;">LIVE NOW NEARBY</span></div>
+
+    <div class="card fade-in" style="display:flex;gap:14px;">
+      <div style="width:48px;height:48px;border-radius:12px;background:linear-gradient(135deg,var(--purple),#3C3489);display:flex;align-items:center;justify-content:center;">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="white" stroke="none"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 01-3.46 0"/></svg>
+      </div>
+      <div style="flex:1;">
+        <div style="display:flex;justify-content:space-between;">
+          <span style="font-weight:500;font-size:13px;">Board games @ Union South</span>
+          <span class="pulse" style="width:8px;height:8px;border-radius:50%;background:var(--accent);display:inline-block;"></span>
+        </div>
+        <p style="font-size:12px;color:var(--text-secondary);margin:3px 0;">Need 2 more for Settlers of Catan — snacks provided</p>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-top:6px;">
+          <span class="distance-badge">3 min walk</span>
+          <span style="font-size:11px;color:var(--text-secondary);">6/8 joined</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="card fade-in" style="animation-delay:0.1s;display:flex;gap:14px;">
+      <div style="width:48px;height:48px;border-radius:12px;background:linear-gradient(135deg,var(--warm),#993C1D);display:flex;align-items:center;justify-content:center;">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="white" stroke="none"><path d="M12 3v10.55A4 4 0 1014 17V7h4V3z"/></svg>
+      </div>
+      <div style="flex:1;">
+        <div style="display:flex;justify-content:space-between;">
+          <span style="font-weight:500;font-size:13px;">Photo walk around campus</span>
+          <span class="pulse" style="width:8px;height:8px;border-radius:50%;background:var(--accent);display:inline-block;"></span>
+        </div>
+        <p style="font-size:12px;color:var(--text-secondary);margin:3px 0;">Taking golden hour pics, all skill levels welcome</p>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-top:6px;">
+          <span class="distance-badge">7 min walk</span>
+          <span style="font-size:11px;color:var(--text-secondary);">4 joined</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="card fade-in" style="animation-delay:0.2s;display:flex;gap:14px;">
+      <div style="width:48px;height:48px;border-radius:12px;background:linear-gradient(135deg,var(--accent),#085041);display:flex;align-items:center;justify-content:center;">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="white" stroke="none"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2M9 11a4 4 0 100-8 4 4 0 000 8M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg>
+      </div>
+      <div style="flex:1;">
+        <div style="display:flex;justify-content:space-between;">
+          <span style="font-weight:500;font-size:13px;">Study session — Calc II</span>
+          <span class="pulse" style="width:8px;height:8px;border-radius:50%;background:var(--accent);display:inline-block;"></span>
+        </div>
+        <p style="font-size:12px;color:var(--text-secondary);margin:3px 0;">Working through problem set 7, library 3rd floor</p>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-top:6px;">
+          <span class="distance-badge">1 min walk</span>
+          <span style="font-size:11px;color:var(--text-secondary);">3 joined</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Screen 4: Coffee Chat -->
+  <div class="screen" id="screen-chat">
+    <div class="status-bar"><span>9:41</span><span></span></div>
+    <div style="padding:8px 24px 12px;display:flex;align-items:center;gap:12px;">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--text-primary)" stroke-width="2" style="cursor:pointer;" onclick="showScreen('screen-home')"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+      <div style="display:flex;align-items:center;gap:10px;">
+        <div class="avatar" style="background:var(--purple-light);color:#3C3489;width:36px;height:36px;font-size:12px;">JM</div>
+        <div>
+          <span style="font-weight:500;font-size:14px;">Coffee with Jordan</span>
+          <p style="font-size:11px;color:var(--text-secondary);">Memorial Union Starbucks</p>
+        </div>
+      </div>
+    </div>
+
+    <div style="padding:0 16px;display:flex;flex-direction:column;gap:8px;">
+      <div class="chat-ai">I set up your coffee chat with Jordan! Here are a few things you two might click on:</div>
+      <div class="chat-ai">
+        <p style="font-weight:500;margin-bottom:6px;">Conversation starters:</p>
+        <p style="margin:4px 0;">&#8226; Jordan just watched a documentary on urban decay — connects to your city planning interest</p>
+        <p style="margin:4px 0;">&#8226; You both follow the same cooking YouTube channel</p>
+        <p style="margin:4px 0;">&#8226; Jordan is curious about CS but intimidated by coding — you could share your journey</p>
+      </div>
+      <div class="chat-user">That's perfect, the urban decay thing is a great opener</div>
+      <div class="chat-ai">Great choice! I'll send Jordan a heads up that you're on your way. Have a great chat!</div>
+    </div>
+
+    <div class="card" style="margin-top:16px;background:var(--accent-light);border-color:var(--accent);">
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <div>
+          <p style="font-size:12px;color:var(--accent-dark);font-weight:500;">Meeting in 15 min</p>
+          <p style="font-size:11px;color:var(--accent-dark);opacity:0.7;">Memorial Union Starbucks, 2nd floor</p>
+        </div>
+        <button class="btn-primary" style="padding:8px 16px;font-size:12px;">Get directions</button>
+      </div>
+    </div>
+
+    <div style="padding:16px;margin-top:8px;">
+      <p style="font-size:12px;font-weight:500;color:var(--text-secondary);margin-bottom:8px;">After your chat</p>
+      <div class="card" style="margin:0;display:flex;gap:12px;align-items:center;">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2"><path d="M14 9V5a3 3 0 00-3-3l-4 9v11h11.28a2 2 0 002-1.7l1.38-9a2 2 0 00-2-2.3H14z"/></svg>
+        <div>
+          <p style="font-size:13px;font-weight:500;">Rate your connection</p>
+          <p style="font-size:11px;color:var(--text-secondary);">Helps AI improve future matches</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Screen 5: Profile / Onboarding -->
+  <div class="screen" id="screen-profile">
+    <div class="status-bar"><span>9:41</span><span></span></div>
+    <div class="screen-header">
+      <h1>Your profile</h1>
+      <p>This isn't a resume — tell us what makes you curious</p>
+    </div>
+
+    <div style="text-align:center;padding:0 16px 16px;">
+      <div class="avatar" style="width:72px;height:72px;font-size:24px;background:var(--accent-light);color:var(--accent-dark);margin:0 auto 10px;">A</div>
+      <p style="font-weight:500;font-size:16px;">Alex Chen</p>
+      <p style="font-size:12px;color:var(--text-secondary);">CS major, Junior — Sellery Hall</p>
+    </div>
+
+    <div style="padding:0 16px 8px;"><span style="font-size:12px;font-weight:500;color:var(--text-secondary);letter-spacing:0.5px;">WHAT I'M CURIOUS ABOUT</span></div>
+    <div class="interest-grid">
+      <span class="interest-chip selected">Urban planning</span>
+      <span class="interest-chip selected">Cooking</span>
+      <span class="interest-chip selected">Sustainability</span>
+      <span class="interest-chip">Photography</span>
+      <span class="interest-chip">Philosophy</span>
+      <span class="interest-chip">Film</span>
+      <span class="interest-chip">Music production</span>
+      <span class="interest-chip">Rock climbing</span>
+    </div>
+
+    <div style="padding:0 16px 8px;"><span style="font-size:12px;font-weight:500;color:var(--text-secondary);letter-spacing:0.5px;">OPEN TO</span></div>
+    <div class="interest-grid">
+      <span class="interest-chip selected">Coffee chats</span>
+      <span class="interest-chip selected">Meals together</span>
+      <span class="interest-chip selected">Study sessions</span>
+      <span class="interest-chip">Walks</span>
+      <span class="interest-chip">Events</span>
+      <span class="interest-chip selected">Activities</span>
+    </div>
+
+    <div class="card" style="margin-top:4px;">
+      <p style="font-size:12px;font-weight:500;color:var(--text-secondary);margin-bottom:8px;">YOUR STATS</p>
+      <div style="display:flex;justify-content:space-around;text-align:center;">
+        <div><span style="font-size:20px;font-weight:500;color:var(--accent-dark);">12</span><p style="font-size:11px;color:var(--text-secondary);">Connections</p></div>
+        <div><span style="font-size:20px;font-weight:500;color:var(--purple);">8</span><p style="font-size:11px;color:var(--text-secondary);">Coffee chats</p></div>
+        <div><span style="font-size:20px;font-weight:500;color:var(--warm);">4</span><p style="font-size:11px;color:var(--text-secondary);">Activities</p></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bottom Nav -->
+  <div class="bottom-nav">
+    <button class="nav-item active" onclick="showScreen('screen-home')" id="nav-home">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg>
+      <span>Home</span>
+    </button>
+    <button class="nav-item" onclick="showScreen('screen-match')" id="nav-match">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+      <span>Match</span>
+    </button>
+    <button class="nav-item" onclick="showScreen('screen-nearby')" id="nav-nearby">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+      <span>Broadcast</span>
+    </button>
+    <button class="nav-item" onclick="showScreen('screen-chat')" id="nav-chat">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+      <span>Chats</span>
+    </button>
+    <button class="nav-item" onclick="showScreen('screen-profile')" id="nav-profile">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+      <span>Profile</span>
+    </button>
+  </div>
+</div>
+
+<script>
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  const navMap = {
+    'screen-home': 'nav-home',
+    'screen-match': 'nav-match',
+    'screen-nearby': 'nav-nearby',
+    'screen-chat': 'nav-chat',
+    'screen-profile': 'nav-profile'
+  };
+  if (navMap[id]) document.getElementById(navMap[id]).classList.add('active');
+}
+document.querySelectorAll('.interest-chip').forEach(chip => {
+  chip.addEventListener('click', () => chip.classList.toggle('selected'));
+});
+document.querySelectorAll('.pill').forEach(pill => {
+  pill.addEventListener('click', () => {
+    document.querySelectorAll('.pill').forEach(p => p.classList.remove('active'));
+    pill.classList.add('active');
+  });
+});
+</script>
