@@ -1,19 +1,55 @@
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,400;0,500;1,400&family=Fraunces:opsz,wght@9..144,400;9..144,500&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-* {
-  box-sizing: border-box;
+:root {
+  --app-bg: #fafaf7;
+  --card-bg: #ffffff;
+  --accent: #1d9e75;
+  --accent-light: #e1f5ee;
+  --accent-dark: #0f6e56;
+  --warm: #d85a30;
+  --warm-light: #faece7;
+  --purple: #7f77dd;
+  --purple-light: #eeedfe;
+  --pink: #d4537e;
+  --pink-light: #fbeaf0;
+  --text-primary: #2c2c2a;
+  --text-secondary: #888780;
+  --text-hint: #b4b2a9;
+  --border: rgba(0, 0, 0, 0.08);
+  --nav-height: 56px;
 }
 
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
 body {
-  margin: 0;
-  font-family: system-ui, -apple-system, sans-serif;
-  background: #0f172a;
-  color: #f1f5f9;
+  font-family: 'DM Sans', sans-serif;
+  color: var(--text-primary);
+  background: #e5e5e0;
 }
 
 #root {
-  width: 100%;
+  width: 375px;
+  max-width: 100%;
+  margin: 0 auto;
   min-height: 100svh;
+  background: var(--app-bg);
+  position: relative;
 }
+
+.fraunces { font-family: 'Fraunces', serif; }
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.pulse { animation: pulse 2s infinite; }
+.fade-in { animation: fadeIn 0.3s ease; }

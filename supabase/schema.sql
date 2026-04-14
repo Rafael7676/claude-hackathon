@@ -1,6 +1,41 @@
 -- Enable PostGIS for geospatial queries
 create extension if not exists postgis;
 
+-- Profiles (guest users)
+create table if not exists profiles (
+  id text primary key,
+  username text not null,
+  interests text[] default '{}',
+  open_to text[] default '{}',
+  connections int default 0,
+  coffee_chats int default 0,
+  activities int default 0,
+  updated_at timestamptz default now()
+);
+
+alter table profiles enable row level security;
+create policy "anyone can read profiles" on profiles for select using (true);
+create policy "anyone can upsert profiles" on profiles for all using (true) with check (true);
+
+-- Broadcasts
+create table if not exists broadcasts (
+  id uuid primary key default gen_random_uuid(),
+  user_id text,
+  username text,
+  title text not null,
+  description text,
+  lat double precision not null,
+  lng double precision not null,
+  joined_count int default 1,
+  created_at timestamptz default now(),
+  expires_at timestamptz default now() + interval '2 hours'
+);
+
+alter table broadcasts enable row level security;
+create policy "anyone can read broadcasts" on broadcasts for select using (true);
+create policy "anyone can create broadcasts" on broadcasts for insert with check (true);
+create policy "anyone can update broadcasts" on broadcasts for update using (true);
+
 -- Squads (must be created before squad_members)
 create table if not exists squads (
   id uuid primary key default gen_random_uuid(),
