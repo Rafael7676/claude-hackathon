@@ -1,52 +1,44 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
-import { useEffect, useState } from 'react'
-import { supabase } from './lib/supabase'
-import type { Session } from '@supabase/supabase-js'
-import AuthPage from './pages/AuthPage'
-import MapPage from './pages/MapPage'
+import { useState } from 'react'
+import BottomNav, { type Tab } from './components/BottomNav'
+import HomeScreen from './screens/HomeScreen'
+import MatchScreen from './screens/MatchScreen'
+import BroadcastScreen from './screens/BroadcastScreen'
+import ChatScreen from './screens/ChatScreen'
+import ProfileScreen from './screens/ProfileScreen'
 import './index.css'
 
-export default function App() {
-  const [session, setSession] = useState<Session | null>(null)
-  const [loading, setLoading] = useState(true)
+function getGuestId(): string {
+  let id = localStorage.getItem('squad_guest_id')
+  if (!id) { id = crypto.randomUUID(); localStorage.setItem('squad_guest_id', id) }
+  return id
+}
 
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session)
-      setLoading(false)
-    })
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session)
-    })
-
-    return () => subscription.unsubscribe()
-  }, [])
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-slate-900">
-        <div className="w-8 h-8 border-4 border-violet-500 border-t-transparent rounded-full animate-spin" />
-      </div>
-    )
+function getGuestName(): string {
+  let name = localStorage.getItem('squad_guest_name')
+  if (!name) {
+    const adj = ['Swift', 'Bold', 'Chill', 'Rad', 'Cozy', 'Epic', 'Cool', 'Loud']
+    const noun = ['Badger', 'Hawk', 'Fox', 'Bear', 'Wolf', 'Owl', 'Lynx', 'Deer']
+    name = adj[Math.floor(Math.random() * adj.length)] + noun[Math.floor(Math.random() * noun.length)]
+    localStorage.setItem('squad_guest_name', name)
   }
+  return name
+}
+
+const guestId = getGuestId()
+const guestName = getGuestName()
+
+export default function App() {
+  const [tab, setTab] = useState<Tab>('home')
+  const [myLocation, setMyLocation] = useState<[number, number] | null>(null)
 
   return (
-    <BrowserRouter>
-      <Routes>
-        <Route
-          path="/"
-          element={session ? <Navigate to="/map" replace /> : <Navigate to="/auth" replace />}
-        />
-        <Route
-          path="/auth"
-          element={session ? <Navigate to="/map" replace /> : <AuthPage />}
-        />
-        <Route
-          path="/map"
-          element={session ? <MapPage session={session} /> : <Navigate to="/auth" replace />}
-        />
-      </Routes>
-    </BrowserRouter>
+    <div style={{ position: 'relative', minHeight: '100svh' }}>
+      {tab === 'home' && <HomeScreen username={guestName} onJoin={() => setTab('chat')} />}
+      {tab === 'match' && <MatchScreen onSetupChat={() => setTab('chat')} />}
+      {tab === 'broadcast' && <BroadcastScreen guestId={guestId} guestName={guestName} myLocation={myLocation} onLocation={setMyLocation} />}
+      {tab === 'chat' && <ChatScreen onBack={() => setTab('home')} />}
+      {tab === 'profile' && <ProfileScreen guestId={guestId} username={guestName} />}
+      <BottomNav active={tab} onChange={setTab} />
+    </div>
   )
 }

@@ -1,6 +1,49 @@
 -- Enable PostGIS for geospatial queries
 create extension if not exists postgis;
 
+-- Profiles (guest users)
+create table if not exists profiles (
+  id text primary key,
+  username text not null,
+  interests text[] default '{}',
+  open_to text[] default '{}',
+  connections int default 0,
+  coffee_chats int default 0,
+  activities int default 0,
+  updated_at timestamptz default now()
+);
+
+alter table profiles enable row level security;
+create policy "anyone can read profiles" on profiles for select using (true);
+create policy "anyone can upsert profiles" on profiles for all using (true) with check (true);
+
+-- Broadcasts
+create table if not exists broadcasts (
+  id uuid primary key default gen_random_uuid(),
+  user_id text,
+  username text,
+  title text not null,
+  description text,
+  lat double precision not null,
+  lng double precision not null,
+  joined_count int default 1,
+  created_at timestamptz default now(),
+  expires_at timestamptz default now() + interval '2 hours'
+);
+
+alter table broadcasts enable row level security;
+create policy "anyone can read broadcasts" on broadcasts for select using (true);
+create policy "anyone can create broadcasts" on broadcasts for insert with check (true);
+create policy "anyone can update broadcasts" on broadcasts for update using (true);
+
+-- Squads (must be created before squad_members)
+create table if not exists squads (
+  id uuid primary key default gen_random_uuid(),
+  name text,
+  created_by uuid references auth.users(id),
+  created_at timestamptz default now()
+);
+
 -- Squad members (active users who have pinged)
 create table if not exists squad_members (
   id uuid primary key references auth.users(id) on delete cascade,
@@ -11,21 +54,13 @@ create table if not exists squad_members (
   updated_at timestamptz default now()
 );
 
--- Squads
-create table if not exists squads (
-  id uuid primary key default gen_random_uuid(),
-  name text,
-  created_by uuid references auth.users(id),
-  created_at timestamptz default now()
-);
-
 -- Squad invites
 create table if not exists squad_invites (
   id uuid primary key default gen_random_uuid(),
   squad_id uuid references squads(id) on delete cascade,
   from_user uuid references auth.users(id),
   to_user uuid references auth.users(id),
-  status text default 'pending', -- pending | accepted | rejected
+  status text default 'pending',
   created_at timestamptz default now()
 );
 
@@ -67,7 +102,7 @@ create trigger squad_members_updated_at
 before update on squad_members
 for each row execute function update_updated_at();
 
--- RLS: users can only see and write their own row
+-- RLS policies
 alter table squad_members enable row level security;
 
 create policy "users can upsert own location"
