@@ -236,9 +236,31 @@ export default function BroadcastScreen({ guestId, guestName, myLocation, onLoca
         </div>
       )}
 
+      {/* Trending activity cards from pipeline */}
+      <div style={{ padding: '4px 16px 8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', letterSpacing: '0.5px', textTransform: 'uppercase' }}>Trending activities</span>
+        <span style={{ fontSize: '10px', color: 'var(--accent-dark)', fontWeight: 500 }}>Reels → Claude → campus</span>
+      </div>
+
+      <div style={{ display: 'flex', gap: '10px', padding: '0 16px', marginBottom: '16px', overflowX: 'auto', scrollbarWidth: 'none' }}>
+        {[
+          { emoji: '🛍', title: 'Thrift flip', meta: '3–5 people · $10', color: 'var(--warm)' },
+          { emoji: '📚', title: 'Study + sunset', meta: '4–8 people · Free', color: 'var(--purple)' },
+          { emoji: '🍜', title: '$5 dinner crawl', meta: 'Groups of 4 · ~$5', color: 'var(--accent)' },
+          { emoji: '☕', title: 'Coffee roulette', meta: '1-on-1 · Free', color: '#7f77dd' },
+        ].map(t => (
+          <div key={t.title} style={{ background: 'var(--card-bg)', border: '0.5px solid var(--border)', borderRadius: '14px', padding: '12px', minWidth: '130px', flexShrink: 0, cursor: 'pointer' }}>
+            <div style={{ fontSize: '24px', marginBottom: '6px' }}>{t.emoji}</div>
+            <p style={{ fontSize: '12px', fontWeight: 500, color: 'var(--text-primary)', marginBottom: '4px' }}>{t.title}</p>
+            <p style={{ fontSize: '10px', color: 'var(--text-secondary)' }}>{t.meta}</p>
+            <div style={{ marginTop: '8px', height: '3px', borderRadius: '2px', background: t.color, opacity: 0.6 }} />
+          </div>
+        ))}
+      </div>
+
       {/* Live now */}
       <div style={{ padding: '4px 16px 8px' }}>
-        <span style={{ fontSize: '12px', fontWeight: 500, color: 'var(--text-secondary)', letterSpacing: '0.5px' }}>LIVE NOW NEARBY</span>
+        <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', letterSpacing: '0.5px', textTransform: 'uppercase' }}>Live now nearby</span>
       </div>
 
       {broadcasts.map((b, i) => (

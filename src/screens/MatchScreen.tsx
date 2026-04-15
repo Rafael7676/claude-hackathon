@@ -4,73 +4,62 @@ interface Props {
   onSetupChat: () => void
 }
 
+// Spec-exact 8 dimensions with weights
 const DIMENSIONS = [
-  { icon: '🔬', label: 'Curiosity graph',    desc: 'What you want to learn' },
-  { icon: '💥', label: 'Bubble-breaker',     desc: 'Openness to unlike people' },
-  { icon: '🌐', label: 'Cross-discipline',   desc: 'Different fields, shared Qs' },
-  { icon: '🎯', label: 'Activity fit',       desc: 'Compatible hangout styles' },
-  { icon: '🕐', label: 'Availability',       desc: 'Schedule alignment' },
-  { icon: '📍', label: 'Proximity',          desc: 'How nearby they are' },
-  { icon: '🔄', label: 'Feedback loop',      desc: 'Smarter after every meetup' },
-  { icon: '🌱', label: 'Growth potential',   desc: 'Long-term connection value' },
+  { icon: '🔬', label: 'Curiosity graph',              desc: 'What they want to learn', weight: '30%' },
+  { icon: '💥', label: 'Bubble-breaker score',         desc: 'Openness to unlike people', weight: '15%' },
+  { icon: '⚡', label: 'Social energy level',          desc: 'Introvert / ambi / extrovert', weight: '12%' },
+  { icon: '🗓', label: 'Schedule compatibility',       desc: 'Overlapping free windows', weight: '12%' },
+  { icon: '📍', label: 'Proximity patterns',           desc: 'Where they spend time on campus', weight: '10%' },
+  { icon: '💬', label: 'Vibe & communication style',   desc: 'Humor, tone, how they text', weight: '8%' },
+  { icon: '🎯', label: 'Activity preferences',         desc: 'Active vs chill, food vs outdoors', weight: '8%' },
+  { icon: '🔄', label: 'Feedback loop',                desc: 'Smarter after every meetup', weight: '5%' },
 ]
 
 interface DimScore { label: string; value: number; color: string }
 
 const matches = [
   {
-    initials: 'RL',
-    avatarBg: '#e6f1fb',
-    avatarColor: '#0c447c',
-    name: 'Rosa L.',
-    major: 'Urban Planning + Geography',
-    score: 94,
+    initials: 'RL', avatarBg: '#e6f1fb', avatarColor: '#0c447c',
+    name: 'Rosa L.', major: 'Urban Planning + Geography', score: 94,
     bridge: "She studies how cities shape communities — you build the tech that powers them. Neither of you has the full picture alone.",
     dims: [
-      { label: 'Curiosity graph',  value: 92, color: '#1d9e75' },
-      { label: 'Cross-discipline', value: 96, color: '#7f77dd' },
-      { label: 'Bubble-breaker',   value: 71, color: '#d85a30' },
+      { label: 'Curiosity graph',        value: 92, color: '#1d9e75' },
+      { label: 'Proximity patterns',     value: 88, color: '#7f77dd' },
+      { label: 'Bubble-breaker score',   value: 71, color: '#d85a30' },
     ] as DimScore[],
     tags: [
       { label: 'Urban design', bg: 'var(--accent-light)', color: 'var(--accent-dark)' },
-      { label: 'Cooking club', bg: 'var(--warm-light)',   color: '#993c1d' },
-      { label: 'GIS + data',   bg: 'var(--purple-light)', color: '#3c3489' },
+      { label: 'Cooking club', bg: 'var(--warm-light)', color: '#993c1d' },
+      { label: 'GIS + data', bg: 'var(--purple-light)', color: '#3c3489' },
     ],
   },
   {
-    initials: 'TK',
-    avatarBg: 'var(--warm-light)',
-    avatarColor: '#993c1d',
-    name: 'Tyler K.',
-    major: 'Architecture + Art history',
-    score: 87,
-    bridge: "His thesis on walkable cities overlaps with your urban interest, but he'd push your thinking in ways another CS major never would.",
+    initials: 'TK', avatarBg: 'var(--warm-light)', avatarColor: '#993c1d',
+    name: 'Tyler K.', major: 'Architecture + Art history', score: 87,
+    bridge: "His thesis on walkable cities overlaps your urban interest, but he'd push your thinking in ways another CS major never would.",
     dims: [
-      { label: 'Cross-discipline', value: 91, color: '#7f77dd' },
-      { label: 'Bubble-breaker',   value: 84, color: '#d85a30' },
-      { label: 'Activity fit',     value: 78, color: '#1d9e75' },
+      { label: 'Curiosity graph',              value: 85, color: '#1d9e75' },
+      { label: 'Bubble-breaker score',         value: 84, color: '#d85a30' },
+      { label: 'Vibe & communication style',   value: 78, color: '#7f77dd' },
     ] as DimScore[],
     tags: [
       { label: 'Walkable cities', bg: 'var(--purple-light)', color: '#3c3489' },
-      { label: '3D modeling',     bg: '#e6f1fb',             color: '#0c447c' },
+      { label: '3D modeling', bg: '#e6f1fb', color: '#0c447c' },
     ],
   },
   {
-    initials: 'DM',
-    avatarBg: 'var(--pink-light)',
-    avatarColor: '#72243e',
-    name: 'Danielle M.',
-    major: 'Theater + Education',
-    score: 79,
-    bridge: "You'd never have met otherwise — that's exactly the point. Her improv background could unlock a side of you that problem-set culture hasn't touched.",
+    initials: 'DM', avatarBg: 'var(--pink-light)', avatarColor: '#72243e',
+    name: 'Danielle M.', major: 'Theater + Education', score: 79,
+    bridge: "You'd never have met otherwise — that's the point. Her improv background could unlock a side of you that problem-set culture hasn't touched.",
     dims: [
-      { label: 'Bubble-breaker',  value: 97, color: '#d85a30' },
-      { label: 'Growth potential', value: 88, color: '#1d9e75' },
-      { label: 'Activity fit',    value: 73, color: '#7f77dd' },
+      { label: 'Bubble-breaker score',   value: 97, color: '#d85a30' },
+      { label: 'Activity preferences',   value: 88, color: '#1d9e75' },
+      { label: 'Social energy level',    value: 73, color: '#7f77dd' },
     ] as DimScore[],
     tags: [
-      { label: 'Improv',     bg: 'var(--pink-light)',   color: '#72243e' },
-      { label: 'Education',  bg: 'var(--accent-light)', color: 'var(--accent-dark)' },
+      { label: 'Improv', bg: 'var(--pink-light)', color: '#72243e' },
+      { label: 'Education', bg: 'var(--accent-light)', color: 'var(--accent-dark)' },
       { label: 'Storytelling', bg: 'var(--warm-light)', color: '#993c1d' },
     ],
   },
@@ -84,7 +73,7 @@ function DimBar({ label, value, color }: DimScore) {
         <span style={{ fontSize: '11px', fontWeight: 600, color }}>{value}%</span>
       </div>
       <div style={{ height: '4px', background: 'var(--border)', borderRadius: '2px', overflow: 'hidden' }}>
-        <div style={{ height: '100%', width: `${value}%`, background: color, borderRadius: '2px', transition: 'width 0.6s ease' }} />
+        <div style={{ height: '100%', width: `${value}%`, background: color, borderRadius: '2px' }} />
       </div>
     </div>
   )
@@ -109,10 +98,7 @@ export default function MatchScreen({ onSetupChat }: Props) {
 
       {/* 8-dimension engine */}
       <div style={{ background: 'var(--accent-light)', borderRadius: '16px', margin: '0 16px 12px', padding: '14px 16px', border: '0.5px solid var(--accent)' }}>
-        <button
-          onClick={() => setExpanded(e => !e)}
-          style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontFamily: 'inherit' }}
-        >
+        <button onClick={() => setExpanded(e => !e)} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontFamily: 'inherit' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--accent-dark)" strokeWidth={2}><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
             <span style={{ fontSize: '13px', fontWeight: 500, color: 'var(--accent-dark)' }}>8-dimension matching engine</span>
@@ -120,21 +106,22 @@ export default function MatchScreen({ onSetupChat }: Props) {
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--accent-dark)" strokeWidth={2} style={{ transform: expanded ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }}><path d="M6 9l6 6 6-6"/></svg>
         </button>
 
-        {expanded && (
+        {expanded ? (
           <div style={{ marginTop: '12px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
             {DIMENSIONS.map(d => (
               <div key={d.label} style={{ background: 'white', borderRadius: '10px', padding: '8px 10px', border: '0.5px solid rgba(15,110,86,0.15)' }}>
-                <div style={{ fontSize: '16px', marginBottom: '2px' }}>{d.icon}</div>
-                <div style={{ fontSize: '11px', fontWeight: 600, color: 'var(--accent-dark)', lineHeight: 1.3 }}>{d.label}</div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                  <div style={{ fontSize: '16px' }}>{d.icon}</div>
+                  <span style={{ fontSize: '10px', fontWeight: 600, color: 'var(--accent-dark)', background: 'var(--accent-light)', padding: '1px 5px', borderRadius: '6px' }}>{d.weight}</span>
+                </div>
+                <div style={{ fontSize: '11px', fontWeight: 600, color: 'var(--accent-dark)', lineHeight: 1.3, marginTop: '4px' }}>{d.label}</div>
                 <div style={{ fontSize: '10px', color: 'var(--text-secondary)', marginTop: '1px' }}>{d.desc}</div>
               </div>
             ))}
           </div>
-        )}
-
-        {!expanded && (
+        ) : (
           <p style={{ fontSize: '12px', color: 'var(--accent-dark)', lineHeight: 1.6, marginTop: '8px' }}>
-            Claude evaluates curiosity gaps, bubble-breaking potential, and 6 other dimensions — finding people who <em>complement</em> you, not just resemble you.
+            Curiosity graph (30%) and bubble-breaker score (15%) are the core differentiators — no competitor matches on either. Every meetup makes the next match smarter via the feedback loop.
           </p>
         )}
       </div>
@@ -148,14 +135,13 @@ export default function MatchScreen({ onSetupChat }: Props) {
           I'm CS but I keep thinking about urban planning and why some cities feel alive and others don't. Also trying to learn to cook.
         </div>
         <div style={{ padding: '12px 16px', borderRadius: '16px', fontSize: '13px', lineHeight: 1.5, maxWidth: '85%', background: 'var(--accent-light)', color: 'var(--accent-dark)', borderBottomLeftRadius: '4px' }}>
-          High curiosity-graph signal, strong cross-discipline potential. I found 3 people who'd genuinely expand your thinking — here's the bridge for each:
+          Strong curiosity-graph signal across disciplines. I found 3 people who'd genuinely expand your thinking — here's the bridge for each:
         </div>
       </div>
 
       {/* Match cards */}
       {visible.map((m, i) => (
         <div key={m.name} className="fade-in" style={{ background: 'var(--card-bg)', borderRadius: '16px', margin: '0 16px 12px', padding: '16px', border: '0.5px solid var(--border)', animationDelay: `${i * 0.1}s` }}>
-          {/* Header row */}
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
               <div style={{ width: '40px', height: '40px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 500, fontSize: '14px', flexShrink: 0, background: m.avatarBg, color: m.avatarColor }}>{m.initials}</div>
@@ -183,12 +169,9 @@ export default function MatchScreen({ onSetupChat }: Props) {
 
           {/* Tags */}
           <div style={{ marginBottom: '12px' }}>
-            {m.tags.map(t => (
-              <span key={t.label} style={{ display: 'inline-block', padding: '3px 10px', borderRadius: '12px', fontSize: '11px', fontWeight: 500, margin: '2px 4px 2px 0', background: t.bg, color: t.color }}>{t.label}</span>
-            ))}
+            {m.tags.map(t => <span key={t.label} style={{ display: 'inline-block', padding: '3px 10px', borderRadius: '12px', fontSize: '11px', fontWeight: 500, margin: '2px 4px 2px 0', background: t.bg, color: t.color }}>{t.label}</span>)}
           </div>
 
-          {/* Actions */}
           <div style={{ display: 'flex', gap: '8px' }}>
             <button onClick={onSetupChat} style={{ flex: 1, background: 'var(--accent)', color: 'white', border: 'none', borderRadius: '12px', padding: '10px', fontSize: '12px', fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit' }}>Set up a meetup</button>
             <button onClick={() => setSkipped(s => new Set([...s, m.name]))} style={{ background: 'none', color: 'var(--text-secondary)', border: '1px solid var(--border)', borderRadius: '12px', padding: '8px 14px', fontSize: '12px', fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit' }}>Skip</button>
@@ -199,7 +182,7 @@ export default function MatchScreen({ onSetupChat }: Props) {
       {visible.length === 0 && (
         <div style={{ textAlign: 'center', padding: '40px 24px', color: 'var(--text-hint)', fontSize: '13px' }}>
           <div style={{ fontSize: '28px', marginBottom: '8px' }}>🌱</div>
-          No matches left for today — check back tomorrow as more people ping in.
+          No matches left — check back tomorrow as more people ping in.
         </div>
       )}
     </div>
