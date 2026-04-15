@@ -1,5 +1,35 @@
 import { useEffect, useRef, useState } from 'react'
+import { MapContainer, TileLayer, Circle, Marker, useMapEvents } from 'react-leaflet'
+import L from 'leaflet'
 import { supabase } from '../lib/supabase'
+
+import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png'
+import markerIcon from 'leaflet/dist/images/marker-icon.png'
+import markerShadow from 'leaflet/dist/images/marker-shadow.png'
+
+delete (L.Icon.Default.prototype as unknown as Record<string, unknown>)._getIconUrl
+L.Icon.Default.mergeOptions({ iconRetinaUrl: markerIcon2x, iconUrl: markerIcon, shadowUrl: markerShadow })
+
+const PING_RADIUS_M = 300
+
+const BLOB_COLORS = [
+  'rgba(29,158,117,0.85)',
+  'rgba(216,90,48,0.85)',
+  'rgba(83,74,183,0.85)',
+]
+const AVATAR_STYLES = [
+  { bg: '#E1F5EE', color: '#0F6E56' },
+  { bg: '#FAECE7', color: '#993C1D' },
+  { bg: '#EEEDFE', color: '#534AB7' },
+]
+
+interface NearbyUser {
+  id: string
+  username: string
+  lat: number
+  lng: number
+  squad_id: string | null
+}
 
 interface Squad {
   id: string
@@ -10,17 +40,37 @@ interface Squad {
   avatarColor: string
   initials: string
   blobColor: string
-  blobLeft: number
-  blobTop: number
+  lat: number
+  lng: number
   blobSize: number
   type: 'join' | 'invite'
 }
 
-const defaultSquads: Squad[] = [
-  { id: '1', name: 'Coffee run crew',  count: 6, distance: '80m away',  avatarBg: '#E1F5EE', avatarColor: '#0F6E56', initials: 'CS', blobColor: 'rgba(29,158,117,0.85)',  blobLeft: 75,  blobTop: 60,  blobSize: 48, type: 'join' },
-  { id: '2', name: 'Study break',      count: 3, distance: '140m away', avatarBg: '#FAECE7', avatarColor: '#993C1D', initials: 'ST', blobColor: 'rgba(216,90,48,0.85)',   blobLeft: 220, blobTop: 105, blobSize: 38, type: 'join' },
-  { id: '3', name: 'You + 1 friend',   count: 2, distance: 'Your squad', avatarBg: '#EEEDFE', avatarColor: '#534AB7', initials: 'YO', blobColor: 'rgba(83,74,183,0.85)',  blobLeft: 115, blobTop: 195, blobSize: 32, type: 'invite' },
-]
+function blobIcon(color: string, count: number, size: number, selected: boolean) {
+  const s = Math.max(size, 28)
+  const ring = selected ? `box-shadow:0 0 0 3px white,0 0 0 5px rgba(83,74,183,0.4);` : ''
+  return L.divIcon({
+    className: '',
+    html: `<div style="width:${s}px;height:${s}px;border-radius:50%;background:${color};display:flex;align-items:center;justify-content:center;cursor:pointer;${ring}transition:all 0.3s;"><span style="font-size:11px;font-weight:500;color:white;">${count}</span></div>`,
+    iconSize: [s, s],
+    iconAnchor: [s / 2, s / 2],
+  })
+}
+
+function youIcon() {
+  return L.divIcon({
+    className: '',
+    html: `<div style="width:14px;height:14px;background:#534AB7;border-radius:50%;border:2px solid white;"></div>`,
+    iconSize: [14, 14],
+    iconAnchor: [7, 7],
+  })
+}
+
+function MapCenterOnLoad({ location }: { location: [number, number] }) {
+  const map = useMapEvents({})
+  useEffect(() => { map.setView(location, 17) }, [location])
+  return null
+}
 
 interface Props {
   guestId: string
@@ -30,11 +80,12 @@ interface Props {
 }
 
 export default function BroadcastScreen({ guestId, guestName, myLocation, onLocation }: Props) {
-  const [squads, setSquads] = useState<Squad[]>(defaultSquads)
+  const [nearbyUsers, setNearbyUsers] = useState<NearbyUser[]>([])
+  const [squads, setSquads] = useState<Squad[]>([])
   const [pinged, setPinged] = useState(false)
   const [pinging, setPinging] = useState(false)
   const [showNotif, setShowNotif] = useState(false)
-  const [ringSize, setRingSize] = useState(0)
+  const [showRing, setShowRing] = useState(false)
   const [waves, setWaves] = useState<number[]>([])
   const [selectedSquad, setSelectedSquad] = useState<Squad | null>(null)
   const [joined, setJoined] = useState<Set<string>>(new Set())
@@ -42,25 +93,34 @@ export default function BroadcastScreen({ guestId, guestName, myLocation, onLoca
   const [newTitle, setNewTitle] = useState('')
   const [posting, setPosting] = useState(false)
   const waveId = useRef(0)
+  const mapRef = useRef<L.Map | null>(null)
 
-  // Get location silently
+  // Get location on mount
   useEffect(() => {
-    if (myLocation) return
     navigator.geolocation.getCurrentPosition(
-      pos => onLocation([pos.coords.latitude, pos.coords.longitude]),
+      pos => {
+        const loc: [number, number] = [pos.coords.latitude, pos.coords.longitude]
+        onLocation(loc)
+      },
       () => onLocation([43.0766, -89.4125])
     )
   }, [])
 
-  // Fetch real broadcasts and add as squads
+  // Center map when location arrives
+  useEffect(() => {
+    if (myLocation && mapRef.current) mapRef.current.setView(myLocation, 17)
+  }, [myLocation])
+
+  // Real-time broadcasts → squads
   useEffect(() => {
     fetchBroadcasts()
     const channel = supabase
       .channel('broadcasts-rt')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'broadcasts' }, fetchBroadcasts)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'squad_members' }, () => { if (myLocation) fetchNearby() })
       .subscribe()
     return () => { supabase.removeChannel(channel) }
-  }, [])
+  }, [myLocation])
 
   async function fetchBroadcasts() {
     const { data } = await supabase
@@ -68,43 +128,59 @@ export default function BroadcastScreen({ guestId, guestName, myLocation, onLoca
       .select('*')
       .gt('expires_at', new Date().toISOString())
       .order('created_at', { ascending: false })
-      .limit(5)
+      .limit(6)
 
     if (data && data.length > 0) {
-      const liveSquads: Squad[] = data.map((b, i) => ({
+      const loc = myLocation ?? [43.0766, -89.4125]
+      setSquads(data.map((b, i) => ({
         id: b.id,
         name: b.title,
         count: b.joined_count,
-        distance: 'nearby',
-        avatarBg: ['#E1F5EE', '#FAECE7', '#EEEDFE'][i % 3],
-        avatarColor: ['#0F6E56', '#993C1D', '#534AB7'][i % 3],
+        distance: distanceLabel(loc[0], loc[1], b.lat, b.lng),
+        avatarBg: AVATAR_STYLES[i % 3].bg,
+        avatarColor: AVATAR_STYLES[i % 3].color,
         initials: b.title.slice(0, 2).toUpperCase(),
-        blobColor: ['rgba(29,158,117,0.85)', 'rgba(216,90,48,0.85)', 'rgba(83,74,183,0.85)'][i % 3],
-        blobLeft: [90, 200, 130][i % 3],
-        blobTop: [70, 110, 200][i % 3],
+        blobColor: BLOB_COLORS[i % 3],
+        lat: b.lat,
+        lng: b.lng,
         blobSize: Math.min(28 + b.joined_count * 4, 56),
         type: 'join' as const,
-      }))
-      setSquads(liveSquads)
+      })))
     }
   }
 
+  async function fetchNearby() {
+    if (!myLocation) return
+    const { data } = await supabase.rpc('nearby_members', { lat: myLocation[0], lng: myLocation[1], radius_m: PING_RADIUS_M })
+    if (data) setNearbyUsers(data)
+  }
+
+  function distanceLabel(lat1: number, lng1: number, lat2: number, lng2: number) {
+    const R = 6371000
+    const dLat = (lat2 - lat1) * Math.PI / 180
+    const dLng = (lng2 - lng1) * Math.PI / 180
+    const a = Math.sin(dLat/2)**2 + Math.cos(lat1 * Math.PI/180) * Math.cos(lat2 * Math.PI/180) * Math.sin(dLng/2)**2
+    const d = R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a))
+    return d < 1000 ? `${Math.round(d)}m away` : `${(d/1000).toFixed(1)}km away`
+  }
+
   async function handlePing() {
-    if (pinging) return
+    if (pinging || !myLocation) return
     setPinging(true)
 
-    // Ripple wave
+    // Ripple waves
     const id = waveId.current++
     setWaves(w => [...w, id])
     setTimeout(() => setWaves(w => w.filter(x => x !== id)), 1200)
 
-    // Expand ring
-    setRingSize(200)
+    setShowRing(true)
 
-    // Upsert to squad_members
-    if (myLocation) {
-      await supabase.from('squad_members').upsert({ id: guestId, username: guestName, lat: myLocation[0], lng: myLocation[1], squad_id: null })
-    }
+    await supabase.from('squad_members').upsert({
+      id: guestId, username: guestName,
+      lat: myLocation[0], lng: myLocation[1], squad_id: null,
+    })
+
+    await fetchNearby()
 
     setTimeout(() => {
       setPinged(true)
@@ -113,28 +189,22 @@ export default function BroadcastScreen({ guestId, guestName, myLocation, onLoca
     }, 800)
   }
 
-  function dismissNotif() { setShowNotif(false) }
-
-  function handleBlobClick(squad: Squad) {
-    setSelectedSquad(squad)
-    setShowNotif(false)
-  }
-
-  function handleJoin(squad: Squad) {
+  async function handleJoin(squad: Squad) {
     setJoined(prev => new Set(prev).add(squad.id))
     setSelectedSquad(null)
-    // Update count visually
-    setSquads(prev => prev.map(s => s.id === squad.id ? { ...s, count: s.count + 1, blobSize: Math.min(s.blobSize + 4, 60) } : s))
+    await supabase.from('broadcasts')
+      .update({ joined_count: squad.count + 1 })
+      .eq('id', squad.id)
+    fetchBroadcasts()
   }
 
   async function handlePost() {
-    if (!newTitle.trim()) return
+    if (!newTitle.trim() || !myLocation) return
     setPosting(true)
-    const loc = myLocation ?? [43.0766, -89.4125]
     await supabase.from('broadcasts').insert({
       user_id: guestId, username: guestName,
       title: newTitle.trim(), description: '',
-      lat: loc[0], lng: loc[1], joined_count: 1,
+      lat: myLocation[0], lng: myLocation[1], joined_count: 1,
     })
     setNewTitle('')
     setCreating(false)
@@ -142,78 +212,107 @@ export default function BroadcastScreen({ guestId, guestName, myLocation, onLoca
     fetchBroadcasts()
   }
 
-  const displaySquad = selectedSquad ?? { name: `${squads.length} squads nearby`, count: squads.reduce((a, s) => a + s.count, 0) }
+  const totalNearby = nearbyUsers.filter(u => u.id !== guestId).length + squads.reduce((a, s) => a + s.count, 0)
+  const defaultCenter: [number, number] = myLocation ?? [43.0766, -89.4125]
 
   return (
     <div style={{ paddingBottom: 'calc(var(--nav-height) + 16px)', background: 'var(--app-bg)' }}>
+      <style>{`
+        @keyframes pingWave {
+          0%   { stroke-opacity: 0.7; r: 8; }
+          100% { stroke-opacity: 0;   r: 80; }
+        }
+      `}</style>
 
       {/* Top bar */}
       <div style={{ padding: '12px 24px 4px', fontSize: '12px', fontWeight: 500, color: 'var(--text-secondary)' }}>9:41</div>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '4px 16px 10px' }}>
         <div>
           <div style={{ fontSize: '17px', fontWeight: 500, color: 'var(--text-primary)' }}>Squad</div>
-          <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>Memorial Union area</div>
+          <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
+            {myLocation ? 'Your location' : 'Finding location…'}
+          </div>
         </div>
         <button
           onClick={handlePing}
-          disabled={pinging}
-          style={{ background: '#534AB7', color: '#EEEDFE', border: 'none', borderRadius: '20px', padding: '7px 18px', fontSize: '13px', fontWeight: 500, cursor: pinging ? 'default' : 'pointer', opacity: pinging ? 0.7 : 1, fontFamily: 'inherit' }}
+          disabled={pinging || !myLocation}
+          style={{ background: '#534AB7', color: '#EEEDFE', border: 'none', borderRadius: '20px', padding: '7px 18px', fontSize: '13px', fontWeight: 500, cursor: (pinging || !myLocation) ? 'default' : 'pointer', opacity: (pinging || !myLocation) ? 0.6 : 1, fontFamily: 'inherit' }}
         >
           {pinging ? 'Pinging…' : pinged ? 'Re-ping' : 'Ping'}
         </button>
       </div>
 
-      {/* Map area */}
-      <div style={{ position: 'relative', width: '100%', height: '280px', background: '#f0ede6', overflow: 'hidden' }}>
-        {/* Grid */}
-        <div style={{ position: 'absolute', inset: 0, backgroundImage: 'linear-gradient(rgba(0,0,0,0.06) 1px, transparent 1px), linear-gradient(90deg, rgba(0,0,0,0.06) 1px, transparent 1px)', backgroundSize: '30px 30px' }} />
-        {/* Roads */}
-        <div style={{ position: 'absolute', left: 0, right: 0, top: '90px', height: '18px', background: 'rgba(255,255,255,0.7)' }} />
-        <div style={{ position: 'absolute', left: 0, right: 0, top: '180px', height: '14px', background: 'rgba(255,255,255,0.7)' }} />
-        <div style={{ position: 'absolute', top: 0, bottom: 0, left: '80px', width: '16px', background: 'rgba(255,255,255,0.7)' }} />
-        <div style={{ position: 'absolute', top: 0, bottom: 0, left: '210px', width: '14px', background: 'rgba(255,255,255,0.7)' }} />
-        {/* Buildings */}
-        {[
-          { top: 20,  left: 20,  w: 50, h: 60 }, { top: 20,  left: 100, w: 80, h: 55 }, { top: 20,  left: 230, w: 60, h: 50 },
-          { top: 115, left: 20,  w: 45, h: 52 }, { top: 115, left: 105, w: 70, h: 50 }, { top: 115, left: 230, w: 65, h: 50 },
-          { top: 205, left: 20,  w: 55, h: 60 }, { top: 205, left: 100, w: 90, h: 55 }, { top: 205, left: 235, w: 55, h: 55 },
-        ].map((b, i) => (
-          <div key={i} style={{ position: 'absolute', top: b.top, left: b.left, width: b.w, height: b.h, background: '#d8d4cc', borderRadius: '3px' }} />
-        ))}
+      {/* Map */}
+      <div style={{ position: 'relative', height: '280px', overflow: 'hidden' }}>
+        <MapContainer
+          center={defaultCenter}
+          zoom={17}
+          style={{ height: '100%', width: '100%' }}
+          ref={mapRef}
+          zoomControl={false}
+          attributionControl={false}
+        >
+          <TileLayer url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png" />
 
-        {/* Radius ring */}
-        <div style={{ position: 'absolute', left: '160px', top: '140px', width: ringSize, height: ringSize, borderRadius: '50%', border: '2px dashed rgba(83,74,183,0.5)', background: 'rgba(83,74,183,0.07)', transform: 'translate(-50%,-50%)', transition: 'all 0.4s ease', pointerEvents: 'none' }} />
+          {myLocation && <MapCenterOnLoad location={myLocation} />}
 
-        {/* Ping waves */}
-        {waves.map(id => (
-          <div key={id} style={{ position: 'absolute', left: '160px', top: '140px', borderRadius: '50%', border: '2px solid rgba(83,74,183,0.6)', transform: 'translate(-50%,-50%)', animation: 'pingWave 1.2s ease-out forwards', pointerEvents: 'none' }} />
-        ))}
+          {/* Radius ring */}
+          {myLocation && showRing && (
+            <Circle
+              center={myLocation}
+              radius={PING_RADIUS_M}
+              pathOptions={{ color: '#534AB7', fillColor: '#534AB7', fillOpacity: 0.07, weight: 2, dashArray: '6' }}
+            />
+          )}
 
-        {/* Squad blobs */}
-        {squads.map(s => (
-          <div
-            key={s.id}
-            onClick={() => handleBlobClick(s)}
-            style={{ position: 'absolute', left: s.blobLeft, top: s.blobTop, width: s.blobSize, height: s.blobSize, borderRadius: '50%', background: joined.has(s.id) ? 'rgba(29,158,117,0.9)' : s.blobColor, transform: 'translate(-50%,-50%)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', transition: 'all 0.3s ease', boxShadow: selectedSquad?.id === s.id ? '0 0 0 3px white, 0 0 0 5px rgba(83,74,183,0.4)' : 'none' }}
-          >
-            <span style={{ fontSize: '11px', fontWeight: 500, color: 'white', pointerEvents: 'none' }}>{s.count}</span>
-          </div>
-        ))}
+          {/* Ping wave circles */}
+          {myLocation && waves.map(id => (
+            <Circle
+              key={id}
+              center={myLocation}
+              radius={1}
+              pathOptions={{ color: '#534AB7', fillColor: 'transparent', weight: 2, className: `ping-wave-${id}` }}
+            />
+          ))}
 
-        {/* You dot */}
-        <div style={{ position: 'absolute', left: '160px', top: '140px', width: '14px', height: '14px', background: '#534AB7', borderRadius: '50%', border: '2px solid white', transform: 'translate(-50%,-50%)', zIndex: 10 }} />
+          {/* Your location dot */}
+          {myLocation && (
+            <Marker position={myLocation} icon={youIcon()} />
+          )}
 
-        {/* Notification banner */}
+          {/* Nearby users as blobs */}
+          {nearbyUsers
+            .filter(u => u.id !== guestId)
+            .map((u, i) => (
+              <Marker
+                key={u.id}
+                position={[u.lat, u.lng]}
+                icon={blobIcon(BLOB_COLORS[i % 3], 1, 32, false)}
+              />
+            ))}
+
+          {/* Broadcast squads as blobs */}
+          {squads.map(s => (
+            <Marker
+              key={s.id}
+              position={[s.lat, s.lng]}
+              icon={blobIcon(joined.has(s.id) ? 'rgba(29,158,117,0.9)' : s.blobColor, s.count, s.blobSize, selectedSquad?.id === s.id)}
+              eventHandlers={{ click: () => setSelectedSquad(s) }}
+            />
+          ))}
+        </MapContainer>
+
+        {/* Notification banner overlay */}
         {showNotif && (
-          <div style={{ position: 'absolute', top: '8px', left: '10px', right: '10px', background: 'white', border: '0.5px solid var(--border)', borderRadius: '12px', padding: '8px 12px', display: 'flex', alignItems: 'flex-start', gap: '8px', zIndex: 20, animation: 'slideDown 0.3s ease' }}>
+          <div style={{ position: 'absolute', top: '8px', left: '10px', right: '10px', background: 'white', border: '0.5px solid var(--border)', borderRadius: '12px', padding: '8px 12px', display: 'flex', alignItems: 'flex-start', gap: '8px', zIndex: 1000, animation: 'slideDown 0.3s ease', boxShadow: '0 2px 12px rgba(0,0,0,0.1)' }}>
             <div style={{ width: '28px', height: '28px', borderRadius: '8px', background: '#EEEDFE', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px', flexShrink: 0 }}>📍</div>
             <div style={{ flex: 1 }}>
               <div style={{ fontSize: '12px', color: 'var(--text-primary)', lineHeight: 1.4 }}>
-                <b style={{ fontWeight: 500 }}>{squads.reduce((a, s) => a + s.count, 0)} people</b> got your ping nearby
+                <b style={{ fontWeight: 500 }}>{totalNearby > 0 ? `${totalNearby} people` : 'Ping sent!'}</b>{totalNearby > 0 ? ' got your ping nearby' : ' Check back in a moment'}
               </div>
               <div style={{ display: 'flex', gap: '6px', marginTop: '4px' }}>
-                <button onClick={dismissNotif} style={{ fontSize: '11px', padding: '3px 10px', borderRadius: '10px', border: 'none', background: '#534AB7', color: '#EEEDFE', cursor: 'pointer', fontFamily: 'inherit' }}>Open squad</button>
-                <button onClick={dismissNotif} style={{ fontSize: '11px', padding: '3px 10px', borderRadius: '10px', border: '0.5px solid var(--border)', background: 'transparent', color: 'var(--text-secondary)', cursor: 'pointer', fontFamily: 'inherit' }}>Later</button>
+                <button onClick={() => setShowNotif(false)} style={{ fontSize: '11px', padding: '3px 10px', borderRadius: '10px', border: 'none', background: '#534AB7', color: '#EEEDFE', cursor: 'pointer', fontFamily: 'inherit' }}>Open squad</button>
+                <button onClick={() => setShowNotif(false)} style={{ fontSize: '11px', padding: '3px 10px', borderRadius: '10px', border: '0.5px solid var(--border)', background: 'transparent', color: 'var(--text-secondary)', cursor: 'pointer', fontFamily: 'inherit' }}>Later</button>
               </div>
             </div>
           </div>
@@ -226,7 +325,7 @@ export default function BroadcastScreen({ guestId, guestName, myLocation, onLoca
 
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
           <span style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text-primary)' }}>
-            {selectedSquad ? selectedSquad.name : `${squads.length} squads nearby`}
+            {selectedSquad ? selectedSquad.name : squads.length > 0 ? `${squads.length} squads nearby` : 'No squads yet — start one!'}
           </span>
           {selectedSquad && (
             <button onClick={() => setSelectedSquad(null)} style={{ fontSize: '11px', color: 'var(--text-secondary)', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}>← All</button>
@@ -238,18 +337,34 @@ export default function BroadcastScreen({ guestId, guestName, myLocation, onLoca
             <div style={{ width: '32px', height: '32px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', fontWeight: 500, flexShrink: 0, background: s.avatarBg, color: s.avatarColor }}>{s.initials}</div>
             <div style={{ flex: 1 }}>
               <div style={{ fontSize: '13px', color: 'var(--text-primary)' }}>{s.name}</div>
-              <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>{s.count} people · {s.distance}</div>
+              <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>{s.count} {s.count === 1 ? 'person' : 'people'} · {s.distance}</div>
             </div>
             <button
-              onClick={() => s.type === 'invite' ? null : handleJoin(s)}
-              style={{ fontSize: '11px', padding: '4px 10px', borderRadius: '12px', border: `0.5px solid ${joined.has(s.id) ? '#1d9e75' : s.type === 'invite' ? '#1d9e75' : '#534AB7'}`, background: joined.has(s.id) ? '#E1F5EE' : 'transparent', color: joined.has(s.id) ? '#0F6E56' : s.type === 'invite' ? '#0F6E56' : '#534AB7', cursor: 'pointer', fontFamily: 'inherit' }}
+              onClick={() => !joined.has(s.id) && handleJoin(s)}
+              style={{ fontSize: '11px', padding: '4px 10px', borderRadius: '12px', border: `0.5px solid ${joined.has(s.id) ? '#1d9e75' : '#534AB7'}`, background: joined.has(s.id) ? '#E1F5EE' : 'transparent', color: joined.has(s.id) ? '#0F6E56' : '#534AB7', cursor: joined.has(s.id) ? 'default' : 'pointer', fontFamily: 'inherit' }}
             >
-              {joined.has(s.id) ? 'Joined ✓' : s.type === 'invite' ? 'Invite' : 'Join'}
+              {joined.has(s.id) ? 'Joined ✓' : 'Join'}
             </button>
           </div>
         ))}
 
-        {/* Create broadcast */}
+        {/* Nearby pinged users (not in squads) */}
+        {!selectedSquad && nearbyUsers.filter(u => u.id !== guestId).map((u, i) => (
+          <div key={u.id} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '6px 0', borderBottom: '0.5px solid var(--border)' }}>
+            <div style={{ width: '32px', height: '32px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', fontWeight: 500, flexShrink: 0, background: AVATAR_STYLES[i % 3].bg, color: AVATAR_STYLES[i % 3].color }}>
+              {u.username.slice(0, 2).toUpperCase()}
+            </div>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: '13px', color: 'var(--text-primary)' }}>{u.username}</div>
+              <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>nearby · just pinged</div>
+            </div>
+            <button style={{ fontSize: '11px', padding: '4px 10px', borderRadius: '12px', border: '0.5px solid #534AB7', background: 'transparent', color: '#534AB7', cursor: 'pointer', fontFamily: 'inherit' }}>
+              Wave
+            </button>
+          </div>
+        ))}
+
+        {/* Start a squad */}
         <div style={{ marginTop: '12px' }}>
           {creating ? (
             <div>
@@ -268,10 +383,7 @@ export default function BroadcastScreen({ guestId, guestName, myLocation, onLoca
               </div>
             </div>
           ) : (
-            <button
-              onClick={() => setCreating(true)}
-              style={{ width: '100%', background: 'none', border: '1px dashed #534AB7', borderRadius: '12px', padding: '9px', fontSize: '13px', fontWeight: 500, color: '#534AB7', cursor: 'pointer', fontFamily: 'inherit' }}
-            >
+            <button onClick={() => setCreating(true)} style={{ width: '100%', background: 'none', border: '1px dashed #534AB7', borderRadius: '12px', padding: '9px', fontSize: '13px', fontWeight: 500, color: '#534AB7', cursor: 'pointer', fontFamily: 'inherit' }}>
               + Start a squad
             </button>
           )}
@@ -279,10 +391,6 @@ export default function BroadcastScreen({ guestId, guestName, myLocation, onLoca
       </div>
 
       <style>{`
-        @keyframes pingWave {
-          0%   { width: 14px; height: 14px; opacity: 0.8; }
-          100% { width: 120px; height: 120px; opacity: 0; }
-        }
         @keyframes slideDown {
           from { transform: translateY(-40px); opacity: 0; }
           to   { transform: translateY(0); opacity: 1; }
