@@ -21,9 +21,10 @@ const STYLE_OPTIONS = [
   { value: 'thoughtful',label: 'Thoughtful',emoji: '🤔' },
 ]
 
-interface Props { guestId: string; username: string }
+interface JoinedSquad { id: string; name: string; count: number }
+interface Props { guestId: string; username: string; joinedSquads?: JoinedSquad[] }
 
-export default function ProfileScreen({ username }: Props) {
+export default function ProfileScreen({ username, joinedSquads = [] }: Props) {
   const [curiosities, setCuriosities] = useState(['Urban planning', 'Cooking', 'Sustainability'])
   const [openTo, setOpenTo] = useState(['Coffee chats', 'Meals together', 'Study sessions', 'Activities'])
   const [socialEnergy, setSocialEnergy] = useState('ambivert')
@@ -122,11 +123,36 @@ export default function ProfileScreen({ username }: Props) {
         ))}
       </div>
 
+      {/* Squads joined */}
+      <div style={{ padding: '0 16px 8px' }}>
+        <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', letterSpacing: '0.5px', textTransform: 'uppercase' }}>Squads joined</span>
+      </div>
+      <div style={{ margin: '0 16px 16px', background: 'var(--card-bg)', borderRadius: '14px', border: '0.5px solid var(--border)', overflow: 'hidden' }}>
+        {joinedSquads.length === 0 ? (
+          <div style={{ padding: '16px', textAlign: 'center', color: 'var(--text-hint)', fontSize: '12px' }}>
+            No squads yet — head to Squad tab to join one
+          </div>
+        ) : (
+          joinedSquads.map((s, i) => (
+            <div key={s.id} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 14px', borderBottom: i < joinedSquads.length - 1 ? '0.5px solid var(--border)' : 'none' }}>
+              <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: '#EEEDFE', color: '#534AB7', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', fontWeight: 500, flexShrink: 0 }}>
+                {s.name.slice(0, 2).toUpperCase()}
+              </div>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: '13px', color: 'var(--text-primary)', fontWeight: 500 }}>{s.name}</div>
+                <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>{s.count} {s.count === 1 ? 'person' : 'people'}</div>
+              </div>
+              <span style={{ fontSize: '11px', padding: '3px 10px', borderRadius: '10px', background: '#E1F5EE', color: '#0F6E56', fontWeight: 500 }}>Joined ✓</span>
+            </div>
+          ))
+        )}
+      </div>
+
       {/* Stats */}
       <div style={{ background: 'var(--card-bg)', borderRadius: '16px', margin: '4px 16px 16px', padding: '16px', border: '0.5px solid var(--border)' }}>
         <p style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', letterSpacing: '0.5px', textTransform: 'uppercase', marginBottom: '12px' }}>Your stats</p>
         <div style={{ display: 'flex', justifyContent: 'space-around', textAlign: 'center' }}>
-          <div><span style={{ fontSize: '20px', fontWeight: 500, color: 'var(--accent-dark)' }}>0</span><p style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '2px' }}>Connections</p></div>
+          <div><span style={{ fontSize: '20px', fontWeight: 500, color: 'var(--accent-dark)' }}>{joinedSquads.length}</span><p style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '2px' }}>Squads</p></div>
           <div><span style={{ fontSize: '20px', fontWeight: 500, color: 'var(--purple)' }}>0</span><p style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '2px' }}>Coffee chats</p></div>
           <div><span style={{ fontSize: '20px', fontWeight: 500, color: 'var(--warm)' }}>0</span><p style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '2px' }}>Activities</p></div>
         </div>

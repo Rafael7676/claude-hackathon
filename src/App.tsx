@@ -27,17 +27,24 @@ function getGuestName(): string {
 const guestId = getGuestId()
 const guestName = getGuestName()
 
+interface JoinedSquad { id: string; name: string; count: number }
+
 export default function App() {
   const [tab, setTab] = useState<Tab>('home')
   const [myLocation, setMyLocation] = useState<[number, number] | null>(null)
+  const [joinedSquads, setJoinedSquads] = useState<JoinedSquad[]>([])
+
+  function handleJoinSquad(squad: JoinedSquad) {
+    setJoinedSquads(prev => prev.some(s => s.id === squad.id) ? prev : [squad, ...prev])
+  }
 
   return (
     <div style={{ position: 'relative', minHeight: '100svh' }}>
       {tab === 'home' && <HomeScreen username={guestName} onJoin={() => setTab('chat')} />}
       {tab === 'match' && <MatchScreen onSetupChat={() => setTab('chat')} />}
-      {tab === 'broadcast' && <BroadcastScreen guestId={guestId} guestName={guestName} myLocation={myLocation} onLocation={setMyLocation} />}
+      {tab === 'broadcast' && <BroadcastScreen guestId={guestId} guestName={guestName} myLocation={myLocation} onLocation={setMyLocation} onJoinSquad={handleJoinSquad} />}
       {tab === 'chat' && <ChatScreen onBack={() => setTab('home')} />}
-      {tab === 'profile' && <ProfileScreen guestId={guestId} username={guestName} />}
+      {tab === 'profile' && <ProfileScreen guestId={guestId} username={guestName} joinedSquads={joinedSquads} />}
       <BottomNav active={tab} onChange={setTab} />
     </div>
   )
