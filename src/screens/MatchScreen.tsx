@@ -1,8 +1,7 @@
-interface Props {
-  onSetupChat: () => void
-}
+import { useState } from 'react'
+import Toast from '../components/Toast'
 
-const matches = [
+const allMatches = [
   {
     initials: 'RL',
     avatarBg: '#e6f1fb',
@@ -32,9 +31,30 @@ const matches = [
   },
 ]
 
+interface Props {
+  onSetupChat: () => void
+}
+
 export default function MatchScreen({ onSetupChat }: Props) {
+  const [skipped, setSkipped] = useState<Set<string>>(new Set())
+  const [toast, setToast] = useState('')
+
+  const visible = allMatches.filter(m => !skipped.has(m.name))
+
+  function handleSkip(name: string) {
+    setSkipped(prev => new Set(prev).add(name))
+    setToast(`${name} skipped — we'll find someone better`)
+  }
+
+  function handleChat(name: string) {
+    setToast(`Setting up coffee chat with ${name}…`)
+    setTimeout(onSetupChat, 600)
+  }
+
   return (
     <div style={{ paddingBottom: 'calc(var(--nav-height) + 16px)' }}>
+      {toast && <Toast message={toast} onDone={() => setToast('')} />}
+
       <div style={{ padding: '12px 24px 4px', fontSize: '12px', fontWeight: 500, color: 'var(--text-secondary)' }}>9:41</div>
 
       <div style={{ padding: '8px 24px 16px' }}>
@@ -64,13 +84,13 @@ export default function MatchScreen({ onSetupChat }: Props) {
           I'm a CS major but honestly I've been really into urban planning and how cities are designed. Also trying to get better at cooking.
         </div>
         <div style={{ padding: '12px 16px', borderRadius: '16px', fontSize: '13px', lineHeight: 1.5, maxWidth: '85%', background: 'var(--accent-light)', color: 'var(--accent-dark)', borderBottomLeftRadius: '4px' }}>
-          Love that combo! I found 3 people you should meet this week. Here's why each one is interesting for you:
+          Love that combo! I found {allMatches.length} people you should meet this week. Here's why each one is interesting for you:
         </div>
       </div>
 
       {/* Match cards */}
-      {matches.map((m, i) => (
-        <div key={i} className="fade-in" style={{ background: 'var(--card-bg)', borderRadius: '16px', margin: '0 16px 12px', padding: '16px', border: '0.5px solid var(--border)', animationDelay: `${i * 0.1}s` }}>
+      {visible.map((m, i) => (
+        <div key={m.name} className="fade-in" style={{ background: 'var(--card-bg)', borderRadius: '16px', margin: '0 16px 12px', padding: '16px', border: '0.5px solid var(--border)', animationDelay: `${i * 0.1}s` }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
               <div style={{ width: '40px', height: '40px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 500, fontSize: '14px', background: m.avatarBg, color: m.avatarColor }}>{m.initials}</div>
@@ -91,11 +111,17 @@ export default function MatchScreen({ onSetupChat }: Props) {
             ))}
           </div>
           <div style={{ display: 'flex', gap: '8px', marginTop: '12px' }}>
-            <button onClick={onSetupChat} style={{ flex: 1, background: 'var(--accent)', color: 'white', border: 'none', borderRadius: '12px', padding: '10px', fontSize: '12px', fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit' }}>Set up coffee chat</button>
-            <button style={{ background: 'none', color: 'var(--accent-dark)', border: '1px solid var(--accent)', borderRadius: '12px', padding: '8px 12px', fontSize: '12px', fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit' }}>Skip</button>
+            <button onClick={() => handleChat(m.name)} style={{ flex: 1, background: 'var(--accent)', color: 'white', border: 'none', borderRadius: '12px', padding: '10px', fontSize: '12px', fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit' }}>Set up coffee chat</button>
+            <button onClick={() => handleSkip(m.name)} style={{ background: 'none', color: 'var(--accent-dark)', border: '1px solid var(--accent)', borderRadius: '12px', padding: '8px 12px', fontSize: '12px', fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit' }}>Skip</button>
           </div>
         </div>
       ))}
+
+      {visible.length === 0 && (
+        <div style={{ margin: '0 16px', padding: '32px 0', textAlign: 'center', color: 'var(--text-hint)', fontSize: '13px' }}>
+          All caught up — check back tomorrow for new matches
+        </div>
+      )}
     </div>
   )
 }
