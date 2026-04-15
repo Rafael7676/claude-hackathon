@@ -3,7 +3,6 @@ import BottomNav, { type Tab } from './components/BottomNav'
 import HomeScreen from './screens/HomeScreen'
 import MatchScreen from './screens/MatchScreen'
 import BroadcastScreen from './screens/BroadcastScreen'
-import PingScreen from './screens/PingScreen'
 import ChatScreen from './screens/ChatScreen'
 import ProfileScreen from './screens/ProfileScreen'
 import './index.css'
@@ -36,8 +35,7 @@ export default function App() {
     <div style={{ position: 'relative', minHeight: '100svh' }}>
       {tab === 'home' && <HomeScreen username={guestName} onJoin={() => setTab('chat')} />}
       {tab === 'match' && <MatchScreen onSetupChat={() => setTab('chat')} />}
-      {tab === 'broadcast' && <BroadcastScreen guestId={guestId} guestName={guestName} myLocation={myLocation} />}
-      {tab === 'ping' && <PingScreen guestId={guestId} guestName={guestName} myLocation={myLocation} onLocation={setMyLocation} />}
+      {tab === 'broadcast' && <BroadcastScreen guestId={guestId} guestName={guestName} myLocation={myLocation} onLocation={setMyLocation} />}
       {tab === 'chat' && <ChatScreen onBack={() => setTab('home')} />}
       {tab === 'profile' && <ProfileScreen guestId={guestId} username={guestName} />}
       <BottomNav active={tab} onChange={setTab} />

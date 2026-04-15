@@ -1,4 +1,4 @@
-type Tab = 'home' | 'match' | 'broadcast' | 'ping' | 'chat' | 'profile'
+type Tab = 'home' | 'match' | 'broadcast' | 'chat' | 'profile'
 
 interface Props {
   active: Tab
@@ -30,16 +30,6 @@ const items: { id: Tab; label: string; icon: React.ReactNode }[] = [
     icon: (
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} width={22} height={22}>
         <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
-      </svg>
-    ),
-  },
-  {
-    id: 'ping',
-    label: 'Ping',
-    icon: (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} width={22} height={22}>
-        <circle cx="12" cy="12" r="3" />
-        <path d="M6.3 6.3a8 8 0 000 11.4M17.7 6.3a8 8 0 010 11.4M3.5 3.5a12 12 0 000 17M20.5 3.5a12 12 0 010 17" />
       </svg>
     ),
   },
